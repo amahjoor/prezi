@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  ppt-generator:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./generated:/app/generated
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+    restart: unless-stopped 

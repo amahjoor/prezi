@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT-PowerPoint Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="text-center my-5">
+            <h1 class="display-4">GPT-PowerPoint Generator</h1>
+            <p class="lead">Create professional presentations from natural language prompts</p>
+        </header>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <form id="presentation-form">
+                            <div class="mb-4">
+                                <label for="prompt" class="form-label">Describe your presentation</label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="prompt" 
+                                    name="prompt" 
+                                    rows="5" 
+                                    placeholder="e.g., Create a presentation about the history and impact of artificial intelligence, including its origins, major milestones, current applications, and future predictions."
+                                    required
+                                ></textarea>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="convert_to_pdf" name="convert_to_pdf" checked>
+                                <label class="form-check-label" for="convert_to_pdf">
+                                    Also generate PDF version
+                                </label>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="generate-btn">
+                                    <span class="spinner-border spinner-border-sm me-2 d-none" id="spinner" role="status" aria-hidden="true"></span>
+                                    Generate Presentation
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center mt-4 d-none" id="result-container">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-4">Your presentation is ready!</h5>
+                        <p class="card-text">Click the buttons below to download your presentation files.</p>
+                        <div class="d-flex justify-content-center mt-4">
+                            <a href="#" class="btn btn-primary mx-2" id="download-pptx-btn">
+                                <i class="bi bi-file-earmark-ppt me-2"></i>Download PowerPoint
+                            </a>
+                            <a href="#" class="btn btn-success mx-2 d-none" id="download-pdf-btn">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center mt-4 d-none" id="error-container">
+            <div class="col-md-8">
+                <div class="card shadow border-danger">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-danger mb-3">Error</h5>
+                        <p class="card-text" id="error-message">Something went wrong. Please try again.</p>
+                        <button class="btn btn-outline-secondary" id="try-again-btn">Try Again</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-5 mb-4">
+            <p class="text-muted">Made with ❤️ by <a href="https://github.com/amahjoor">Arman</a></p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
