@@ -52,7 +52,7 @@ class PresentationGenerator:
                     
                     Follow these guidelines:
                     - Create 5-10 slides depending on the topic complexity
-                    - Include a title slide, introduction, main content slides, and conclusion
+                    - Include an introduction, main content slides, and conclusion
                     - Keep bullet points concise and focused (1-2 lines each)
                     - Add presenter notes to provide additional context
                     - Ensure logical flow between slides
@@ -112,7 +112,7 @@ class PresentationGenerator:
             {current_content}
             
             Please research this topic in depth and provide:
-            1. 3-5 enhanced bullet points with specific facts, data, or examples
+            1. 4-6 bullet points with specific facts, data, or examples
             2. Detailed presenter notes with background information and talking points
             3. Any relevant statistics or case studies that would strengthen this slide
             
@@ -143,21 +143,15 @@ class PresentationGenerator:
             # Parse JSON
             enhanced_content = json.loads(json_str)
             
-            # Update the slide information
+            # Update the slide information with the researched content (will be condensed later)
             updated_slide = slide_info.copy()
+            updated_slide["researched_content"] = enhanced_content
             updated_slide["content"] = enhanced_content["bullet_points"]
-            
-            # Combine original notes with new detailed notes
-            original_notes = slide_info.get("notes", "")
-            if original_notes:
-                updated_slide["notes"] = f"{original_notes}\n\n{enhanced_content['presenter_notes']}"
-            else:
-                updated_slide["notes"] = enhanced_content["presenter_notes"]
+            updated_slide["notes"] = enhanced_content["presenter_notes"]
             
             # Add references if available
             if "references" in enhanced_content and enhanced_content["references"]:
-                references_text = "\n\nReferences:\n" + "\n".join(f"- {ref}" for ref in enhanced_content["references"])
-                updated_slide["notes"] += references_text
+                updated_slide["references"] = enhanced_content["references"]
             
             return updated_slide
             
@@ -166,8 +160,87 @@ class PresentationGenerator:
             # Return the original slide if research fails
             return slide_info
     
+    def condense_slide_content(self, researched_slide):
+        """Condense the researched content to be more concise and focused on essential information"""
+        try:
+            # Check if this slide has researched content
+            if "researched_content" not in researched_slide:
+                return researched_slide
+                
+            slide_title = researched_slide["title"]
+            
+            # Get the researched content
+            bullet_points = researched_slide["content"]
+            presenter_notes = researched_slide["notes"]
+            references = researched_slide.get("references", [])
+            
+            # Format the bullet points and notes for the prompt
+            bullet_points_text = "\n".join([f"- {point}" for point in bullet_points])
+            references_text = "\n".join([f"- {ref}" for ref in references]) if references else "None"
+            
+            condense_prompt = f"""
+            I need to condense the following researched content for a slide titled "{slide_title}".
+            
+            ORIGINAL BULLET POINTS:
+            {bullet_points_text}
+            
+            ORIGINAL PRESENTER NOTES:
+            {presenter_notes}
+            
+            REFERENCES:
+            {references_text}
+            
+            Please create a more concise version that captures only the most essential information:
+            1. Maximum 3-4 bullet points of 10-15 words each
+            2. Each bullet point should be a clear, direct statement with specific information
+            3. Presenter notes should be 2-3 sentences maximum
+            4. Include only the single most important reference, if any
+            
+            Format your response as a JSON object with these fields:
+            {{
+                "concise_bullet_points": ["Concise point 1", "Concise point 2", ...],
+                "concise_notes": "Very brief presenter notes (2-3 sentences max)",
+                "key_reference": "Most important reference (if applicable)"
+            }}
+            """
+            
+            response = client.chat.completions.create(
+                model=self.default_model,
+                messages=[
+                    {"role": "system", "content": "You are a specialist in creating extremely concise, information-dense presentation content. Your goal is maximum information in minimum words."},
+                    {"role": "user", "content": condense_prompt}
+                ],
+                temperature=0.3
+            )
+            
+            content = response.choices[0].message.content
+            
+            # Extract JSON from the response
+            json_start = content.find('{')
+            json_end = content.rfind('}') + 1
+            json_str = content[json_start:json_end]
+            
+            # Parse JSON
+            condensed_content = json.loads(json_str)
+            
+            # Update the slide with condensed content
+            condensed_slide = researched_slide.copy()
+            condensed_slide["content"] = condensed_content["concise_bullet_points"]
+            condensed_slide["notes"] = condensed_content["concise_notes"]
+            
+            # Add the key reference if available
+            if "key_reference" in condensed_content and condensed_content["key_reference"] and condensed_content["key_reference"].lower() != "none":
+                condensed_slide["notes"] += f"\n\nKey reference: {condensed_content['key_reference']}"
+            
+            return condensed_slide
+            
+        except Exception as e:
+            print(f"Error condensing slide content: {e}")
+            # Return the original researched slide if condensing fails
+            return researched_slide
+    
     def enhance_presentation_outline(self, outline, main_topic):
-        """Enhance the presentation outline with researched content for each slide"""
+        """Enhance the presentation outline with researched and condensed content for each slide"""
         enhanced_outline = {
             "title": outline["title"],
             "slides": []
@@ -178,8 +251,14 @@ class PresentationGenerator:
         
         for i, slide in enumerate(outline["slides"]):
             print(f"Researching slide {i+1}/{total_slides}: {slide['title']}...")
-            enhanced_slide = self.research_slide_content(slide, main_topic)
-            enhanced_outline["slides"].append(enhanced_slide)
+            # Step 1: Research the slide content
+            researched_slide = self.research_slide_content(slide, main_topic)
+            
+            # Step 2: Condense the researched content
+            print(f"Condensing slide {i+1}/{total_slides}: {slide['title']}...")
+            condensed_slide = self.condense_slide_content(researched_slide)
+            
+            enhanced_outline["slides"].append(condensed_slide)
             
             # Add a small delay to avoid rate limiting
             if i < total_slides - 1:
@@ -327,7 +406,7 @@ class PresentationGenerator:
         
         # Step 2 (Optional): If LLM chaining is enabled, research and enhance each slide
         if use_llm_chaining:
-            print("Step 2: Researching and enhancing slide content...")
+            print("Step 2: Researching and enhancing slide content with concise information...")
             outline = self.enhance_presentation_outline(outline, prompt)
         
         # Step 3: Create the PowerPoint presentation
