@@ -75,8 +75,14 @@ class PresentationGenerator:
             return outline
             
         except Exception as e:
-            print(f"Error generating outline: {e}")
-            # Fallback outline if API fails
+            error_message = str(e)
+            print(f"Error generating outline: {error_message}")
+            
+            # Check for API quota exceeded error - propagate it instead of using fallback
+            if 'insufficient_quota' in error_message or 'exceeded your current quota' in error_message:
+                raise Exception(f"OpenAI API quota exceeded: {error_message}")
+                
+            # Use fallback outline only for non-quota errors
             return {
                 "title": f"Presentation about {prompt}",
                 "slides": [
@@ -156,8 +162,14 @@ class PresentationGenerator:
             return updated_slide
             
         except Exception as e:
-            print(f"Error researching slide content: {e}")
-            # Return the original slide if research fails
+            error_message = str(e)
+            print(f"Error researching slide content: {error_message}")
+            
+            # Check for API quota exceeded error - propagate it
+            if 'insufficient_quota' in error_message or 'exceeded your current quota' in error_message:
+                raise Exception(f"OpenAI API quota exceeded: {error_message}")
+                
+            # Return the original slide for other errors
             return slide_info
     
     def condense_slide_content(self, researched_slide):

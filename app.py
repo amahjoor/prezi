@@ -39,10 +39,18 @@ def generate_presentation():
             'used_research': use_llm_chaining
         })
     except Exception as e:
+        error_msg = str(e)
+        status_code = 500
+        
+        # Check for specific OpenAI quota error
+        if 'insufficient_quota' in error_msg or 'exceeded your current quota' in error_msg:
+            error_msg = "OpenAI API quota exceeded. Please update your API key or try again later."
+            status_code = 429  # Too Many Requests
+        
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 500
+            'error': error_msg
+        }), status_code
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -82,10 +90,18 @@ def api_generate():
             
         return jsonify(response_data)
     except Exception as e:
+        error_msg = str(e)
+        status_code = 500
+        
+        # Check for specific OpenAI quota error
+        if 'insufficient_quota' in error_msg or 'exceeded your current quota' in error_msg:
+            error_msg = "OpenAI API quota exceeded. Please update your API key or try again later."
+            status_code = 429  # Too Many Requests
+        
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 500
+            'error': error_msg
+        }), status_code
 
 if __name__ == '__main__':
     # Create generated directory if it doesn't exist
@@ -93,4 +109,4 @@ if __name__ == '__main__':
         os.makedirs('generated')
         
     # Run the app
-    app.run(debug=True) 
+    app.run(debug=True, host='0.0.0.0', port=8080) 

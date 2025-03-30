@@ -46,6 +46,10 @@ document.addEventListener('DOMContentLoaded', function() {
             })
         })
         .then(response => {
+            // Check for HTTP status codes first
+            if (response.status === 429) {
+                throw new Error('OpenAI API quota exceeded. Please update your API key or try again later.');
+            }
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
@@ -73,7 +77,13 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            showError('An error occurred while connecting to the server. Please try again.');
+            
+            // Display a user-friendly message for API quota errors
+            if (error.message.includes('quota exceeded') || error.message.includes('insufficient_quota')) {
+                showError('OpenAI API quota exceeded. The API key has reached its usage limit. Please update your API key or try again later.');
+            } else {
+                showError('An error occurred while connecting to the server. Please try again.');
+            }
         })
         .finally(() => {
             setLoading(false);
@@ -90,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Helper function to show error message
     function showError(message) {
-        errorMessage.textContent = message;
+        errorMessage.innerHTML = message;
         errorContainer.classList.remove('d-none');
         resultContainer.classList.add('d-none');
     }
