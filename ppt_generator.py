@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure OpenAI client
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 class PresentationGenerator:
     def __init__(self):
@@ -33,7 +33,7 @@ class PresentationGenerator:
         """Use OpenAI to generate a structured presentation outline"""
         try:
             # Using the new client.chat.completions.create format for OpenAI >= 1.0.0
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=self.default_model,
                 messages=[
                     {"role": "system", "content": """You are an expert presentation designer. 
@@ -130,7 +130,7 @@ class PresentationGenerator:
             }}
             """
             
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=self.default_model,
                 messages=[
                     {"role": "system", "content": "You are a research assistant specializing in creating well-researched, factual presentation content."},
@@ -216,7 +216,7 @@ class PresentationGenerator:
             }}
             """
             
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=self.default_model,
                 messages=[
                     {"role": "system", "content": "You are a specialist in creating extremely concise, information-dense presentation content. Your goal is maximum information in minimum words."},
@@ -290,11 +290,14 @@ class PresentationGenerator:
         subtitle = slide.placeholders[1]
         
         title.text = outline["title"]
-        subtitle.text = "Generated Presentation"
+        subtitle.text = "Presentation Generation"
         
         # Apply some basic styling to title slide
         title.text_frame.paragraphs[0].font.size = Pt(44)
         title.text_frame.paragraphs[0].font.bold = True
+        
+        # Add footer to title slide
+        self._add_footer(slide, "Made with ❤️ by Arman")
         
         # Add content slides
         for slide_info in outline["slides"]:
@@ -320,6 +323,9 @@ class PresentationGenerator:
             # Add notes if provided
             if "notes" in slide_info and slide_info["notes"]:
                 slide.notes_slide.notes_text_frame.text = slide_info["notes"]
+                
+            # Add footer to content slide
+            self._add_footer(slide, "Made with ❤️ by Arman")
         
         # Generate a unique filename
         file_id = str(uuid.uuid4())[:8]
@@ -328,6 +334,23 @@ class PresentationGenerator:
         # Save the presentation
         prs.save(file_name)
         return file_name
+    
+    def _add_footer(self, slide, footer_text):
+        """Add a footer to a slide"""
+        # Add a textbox at the bottom of the slide for the footer
+        left = Inches(0.1)
+        top = Inches(7.0)
+        width = Inches(9.8)
+        height = Inches(0.3)
+        
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        tf = txBox.text_frame
+        
+        p = tf.paragraphs[0]
+        p.text = footer_text
+        p.alignment = PP_ALIGN.CENTER
+        p.font.size = Pt(10)
+        p.font.color.rgb = RGBColor(100, 100, 100)  # Gray color
     
     def convert_to_pdf(self, pptx_path):
         """Convert PowerPoint to PDF using appropriate method based on OS"""
