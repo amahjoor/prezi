@@ -9,6 +9,7 @@ A tool that generates PowerPoint presentations from natural language prompts usi
 - Command-line interface for scripting
 - API endpoint for programmatic access
 - PDF export functionality
+- Enhanced research mode with LLM chaining
 - Docker support for easy deployment
 - Makefile for common operations
 
@@ -84,6 +85,11 @@ To skip PDF generation:
 python cli.py --no-pdf "Create a presentation about quantum computing"
 ```
 
+To enable research mode with LLM chaining:
+```
+python cli.py --research "Create a presentation about quantum computing"
+```
+
 ### Using Makefile Commands
 
 - `make setup` - Install dependencies and create directories
@@ -98,16 +104,27 @@ python cli.py --no-pdf "Create a presentation about quantum computing"
 
 ### Web Interface
 1. Enter a description of the presentation you want to create
-2. Check the "Also generate PDF version" box if needed
-3. Click "Generate Presentation"
-4. Download the PowerPoint and/or PDF files
+2. Check the "Generate PDF version" box if needed
+3. Optionally enable "Research mode" for enhanced content (uses LLM chaining)
+4. Click "Generate Presentation"
+5. Download the PowerPoint and/or PDF files
+
+### Enhanced Research Mode
+The research mode uses LLM chaining to:
+1. Create an initial presentation outline
+2. Research each slide topic individually for more detailed content
+3. Enhance bullet points with facts, examples, and statistics
+4. Add detailed presenter notes with background information
+5. Include references where appropriate
+
+This process takes longer but produces higher-quality, more informative presentations.
 
 ### API Endpoint
 You can also generate presentations programmatically:
 ```
 curl -X POST http://localhost:5000/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Create a presentation about AI ethics", "convert_to_pdf": true}'
+  -d '{"prompt": "Create a presentation about AI ethics", "convert_to_pdf": true, "use_llm_chaining": true}'
 ```
 
 ## Project Structure

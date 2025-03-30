@@ -9,14 +9,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessage = document.getElementById('error-message');
     const tryAgainBtn = document.getElementById('try-again-btn');
     const convertToPdfCheckbox = document.getElementById('convert_to_pdf');
+    const useLlmChainingCheckbox = document.getElementById('use_llm_chaining');
     
     // Handle form submission
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Get the prompt value
+        // Get form values
         const prompt = document.getElementById('prompt').value.trim();
         const convertToPdf = convertToPdfCheckbox.checked;
+        const useLlmChaining = useLlmChainingCheckbox.checked;
         
         if (!prompt) {
             showError('Please enter a description for your presentation.');
@@ -26,6 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading state
         setLoading(true);
         
+        // If using research mode, update button text to indicate longer process
+        if (useLlmChaining) {
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Researching and Generating (this may take a while...)';
+        }
+        
         // Send request to generate presentation
         fetch('/generate', {
             method: 'POST',
@@ -34,7 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: new URLSearchParams({
                 'prompt': prompt,
-                'convert_to_pdf': convertToPdf
+                'convert_to_pdf': convertToPdf,
+                'use_llm_chaining': useLlmChaining
             })
         })
         .then(response => {
@@ -69,6 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .finally(() => {
             setLoading(false);
+            // Reset button text
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2 d-none" id="spinner" role="status" aria-hidden="true"></span>Generate Presentation';
         });
     });
     
@@ -97,4 +107,16 @@ document.addEventListener('DOMContentLoaded', function() {
             generateBtn.classList.remove('btn-loading');
         }
     }
+    
+    // Add event listener for research mode checkbox
+    useLlmChainingCheckbox.addEventListener('change', function() {
+        const infoText = document.querySelector('.form-text');
+        if (this.checked) {
+            infoText.classList.add('text-primary');
+            generateBtn.textContent = 'Generate Researched Presentation';
+        } else {
+            infoText.classList.remove('text-primary');
+            generateBtn.textContent = 'Generate Presentation';
+        }
+    });
 }); 

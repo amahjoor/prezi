@@ -17,13 +17,14 @@ def index():
 def generate_presentation():
     prompt = request.form.get('prompt')
     convert_to_pdf = request.form.get('convert_to_pdf', 'true').lower() == 'true'
+    use_llm_chaining = request.form.get('use_llm_chaining', 'false').lower() == 'true'
     
     if not prompt:
         return jsonify({'error': 'No prompt provided'}), 400
     
     try:
         # Generate presentation
-        result = generator.generate(prompt, convert_to_pdf=convert_to_pdf)
+        result = generator.generate(prompt, convert_to_pdf=convert_to_pdf, use_llm_chaining=use_llm_chaining)
         
         # Extract filenames from paths
         pptx_filename = os.path.basename(result['pptx_path'])
@@ -34,7 +35,8 @@ def generate_presentation():
             'message': 'Presentation generated successfully',
             'pptx_filename': pptx_filename,
             'pdf_filename': pdf_filename,
-            'has_pdf': pdf_filename is not None
+            'has_pdf': pdf_filename is not None,
+            'used_research': use_llm_chaining
         })
     except Exception as e:
         return jsonify({
@@ -55,10 +57,11 @@ def api_generate():
         return jsonify({'error': 'No prompt provided in request'}), 400
     
     convert_to_pdf = data.get('convert_to_pdf', True)
+    use_llm_chaining = data.get('use_llm_chaining', False)
     
     try:
         # Generate presentation
-        result = generator.generate(data['prompt'], convert_to_pdf=convert_to_pdf)
+        result = generator.generate(data['prompt'], convert_to_pdf=convert_to_pdf, use_llm_chaining=use_llm_chaining)
         
         # Extract filenames from paths
         pptx_filename = os.path.basename(result['pptx_path'])
@@ -69,7 +72,8 @@ def api_generate():
             'message': 'Presentation generated successfully',
             'pptx_filename': pptx_filename,
             'pptx_download_url': f'/download/{pptx_filename}',
-            'has_pdf': pdf_filename is not None
+            'has_pdf': pdf_filename is not None,
+            'used_research': use_llm_chaining
         }
         
         if pdf_filename:

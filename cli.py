@@ -21,6 +21,7 @@ def main():
     parser.add_argument('-o', '--output', help='Output file name (without extension)')
     parser.add_argument('-i', '--interactive', action='store_true', help='Interactive mode')
     parser.add_argument('--no-pdf', action='store_true', help='Disable PDF export')
+    parser.add_argument('--research', action='store_true', help='Enable research mode with LLM chaining')
     
     args = parser.parse_args()
     
@@ -47,9 +48,14 @@ def main():
             # Ask for PDF conversion preference
             want_pdf = input("Do you want to generate a PDF version as well? (Y/n): ").lower() != 'n'
             
+            # Ask for research mode preference
+            use_research = input("Do you want to use research mode for enhanced content? (y/N): ").lower() == 'y'
+            if use_research:
+                print("Research mode enabled. This will take longer but produce more detailed content.")
+            
             print("Generating presentation...")
             try:
-                result = generator.generate(prompt, convert_to_pdf=want_pdf)
+                result = generator.generate(prompt, convert_to_pdf=want_pdf, use_llm_chaining=use_research)
                 
                 print(f"PowerPoint created successfully: {result['pptx_path']}")
                 
@@ -63,7 +69,11 @@ def main():
         # Single generation mode
         print("Generating presentation...")
         try:
-            result = generator.generate(args.prompt, convert_to_pdf=not args.no_pdf)
+            result = generator.generate(
+                args.prompt, 
+                convert_to_pdf=not args.no_pdf,
+                use_llm_chaining=args.research
+            )
             
             print(f"PowerPoint created successfully: {result['pptx_path']}")
             

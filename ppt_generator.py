@@ -3,6 +3,7 @@ import json
 import uuid
 import platform
 import subprocess
+import time
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
@@ -23,13 +24,17 @@ class PresentationGenerator:
         # Create output directory if it doesn't exist
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
+            
+        # Set default parameters
+        self.default_model = "gpt-4"
+        self.use_llm_chaining = False
     
     def generate_presentation_outline(self, prompt):
         """Use OpenAI to generate a structured presentation outline"""
         try:
             # Using the new client.chat.completions.create format for OpenAI >= 1.0.0
             response = client.chat.completions.create(
-                model="gpt-4",
+                model=self.default_model,
                 messages=[
                     {"role": "system", "content": """You are an expert presentation designer. 
                     Create a detailed presentation outline with exactly the following JSON structure:
@@ -92,6 +97,95 @@ class PresentationGenerator:
                     }
                 ]
             }
+    
+    def research_slide_content(self, slide_info, main_topic):
+        """Research and enhance content for a specific slide"""
+        try:
+            # Prepare the prompt for research
+            slide_title = slide_info["title"]
+            current_content = " ".join(slide_info["content"])
+            
+            research_prompt = f"""
+            I'm creating a presentation slide titled "{slide_title}" as part of a presentation about "{main_topic}".
+            
+            The current content for this slide is:
+            {current_content}
+            
+            Please research this topic in depth and provide:
+            1. 3-5 enhanced bullet points with specific facts, data, or examples
+            2. Detailed presenter notes with background information and talking points
+            3. Any relevant statistics or case studies that would strengthen this slide
+            
+            Format your response as a JSON object with these fields:
+            {{
+                "bullet_points": ["Point 1 with specific data", "Point 2 with example", ...],
+                "presenter_notes": "Detailed background information and talking points for the presenter",
+                "references": ["Optional reference 1", "Optional reference 2", ...]
+            }}
+            """
+            
+            response = client.chat.completions.create(
+                model=self.default_model,
+                messages=[
+                    {"role": "system", "content": "You are a research assistant specializing in creating well-researched, factual presentation content."},
+                    {"role": "user", "content": research_prompt}
+                ],
+                temperature=0.5
+            )
+            
+            content = response.choices[0].message.content
+            
+            # Extract JSON from the response
+            json_start = content.find('{')
+            json_end = content.rfind('}') + 1
+            json_str = content[json_start:json_end]
+            
+            # Parse JSON
+            enhanced_content = json.loads(json_str)
+            
+            # Update the slide information
+            updated_slide = slide_info.copy()
+            updated_slide["content"] = enhanced_content["bullet_points"]
+            
+            # Combine original notes with new detailed notes
+            original_notes = slide_info.get("notes", "")
+            if original_notes:
+                updated_slide["notes"] = f"{original_notes}\n\n{enhanced_content['presenter_notes']}"
+            else:
+                updated_slide["notes"] = enhanced_content["presenter_notes"]
+            
+            # Add references if available
+            if "references" in enhanced_content and enhanced_content["references"]:
+                references_text = "\n\nReferences:\n" + "\n".join(f"- {ref}" for ref in enhanced_content["references"])
+                updated_slide["notes"] += references_text
+            
+            return updated_slide
+            
+        except Exception as e:
+            print(f"Error researching slide content: {e}")
+            # Return the original slide if research fails
+            return slide_info
+    
+    def enhance_presentation_outline(self, outline, main_topic):
+        """Enhance the presentation outline with researched content for each slide"""
+        enhanced_outline = {
+            "title": outline["title"],
+            "slides": []
+        }
+        
+        print("Researching and enhancing slide content...")
+        total_slides = len(outline["slides"])
+        
+        for i, slide in enumerate(outline["slides"]):
+            print(f"Researching slide {i+1}/{total_slides}: {slide['title']}...")
+            enhanced_slide = self.research_slide_content(slide, main_topic)
+            enhanced_outline["slides"].append(enhanced_slide)
+            
+            # Add a small delay to avoid rate limiting
+            if i < total_slides - 1:
+                time.sleep(0.5)
+        
+        return enhanced_outline
     
     def create_presentation(self, outline):
         """Create a PowerPoint presentation from the structured outline"""
@@ -223,15 +317,27 @@ class PresentationGenerator:
             print(f"Error during PDF conversion: {e}")
             return None
     
-    def generate(self, prompt, convert_to_pdf=True):
+    def generate(self, prompt, convert_to_pdf=True, use_llm_chaining=False):
         """Generate a complete presentation from a prompt"""
-        # Generate PPT
+        self.use_llm_chaining = use_llm_chaining
+        
+        # Step 1: Generate initial outline
+        print("Step 1: Generating presentation outline...")
         outline = self.generate_presentation_outline(prompt)
+        
+        # Step 2 (Optional): If LLM chaining is enabled, research and enhance each slide
+        if use_llm_chaining:
+            print("Step 2: Researching and enhancing slide content...")
+            outline = self.enhance_presentation_outline(outline, prompt)
+        
+        # Step 3: Create the PowerPoint presentation
+        print("Step 3: Creating PowerPoint presentation...")
         pptx_path = self.create_presentation(outline)
         
-        # Convert to PDF if requested
+        # Step 4: Convert to PDF if requested
         pdf_path = None
         if convert_to_pdf:
+            print("Step 4: Converting to PDF...")
             pdf_path = self.convert_to_pdf(pptx_path)
         
         # Return both paths in a dictionary
@@ -245,7 +351,7 @@ if __name__ == "__main__":
     # Test the generator
     generator = PresentationGenerator()
     prompt = "The future of artificial intelligence in healthcare"
-    result = generator.generate(prompt)
+    result = generator.generate(prompt, use_llm_chaining=True)
     
     print(f"PowerPoint created: {result['pptx_path']}")
     if result['pdf_path']:
